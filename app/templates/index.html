@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AWS Cloud Status Dashboard</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b1220; color: #e5edf8; }
+      main { width: min(680px, calc(100% - 3rem)); padding: 2.5rem; border: 1px solid #26364f; border-radius: 18px; background: #111c2e; box-shadow: 0 20px 60px #0006; }
+      h1 { margin-top: 0; font-size: clamp(2rem, 5vw, 3.25rem); }
+      .status { display: inline-flex; align-items: center; gap: .6rem; color: #7ee2a8; font-weight: 700; }
+      .dot { width: .75rem; height: .75rem; border-radius: 50%; background: #31c76a; box-shadow: 0 0 18px #31c76a; }
+      dl { display: grid; grid-template-columns: auto 1fr; gap: .75rem 1.25rem; margin-top: 2rem; }
+      dt { color: #91a4bf; } dd { margin: 0; font-family: ui-monospace, monospace; }
+      a { color: #73b7ff; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status"><span class="dot"></span>Service operational</p>
+      <h1>AWS Cloud Status Dashboard</h1>
+      <p>A containerized Flask service prepared for automated deployment to Amazon ECS Fargate.</p>
+      <dl>
+        <dt>Environment</dt><dd>{{ environment }}</dd>
+        <dt>Version</dt><dd>{{ version }}</dd>
+        <dt>Health endpoint</dt><dd><a href="/health">/health</a></dd>
+      </dl>
+    </main>
+  </body>
+</html>

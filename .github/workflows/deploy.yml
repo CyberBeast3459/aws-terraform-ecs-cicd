@@ -36,7 +36,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Run automated tests
-        run: pytest
+        run: python -m pytest
 
       - name: Configure AWS credentials through OIDC
         if: github.event_name == 'push'

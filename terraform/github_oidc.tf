@@ -25,14 +25,15 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
     }
 
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:CyberBeast3459/aws-terraform-ecs-cicd:ref:refs/heads/main"
+        "repo:CyberBeast3459/aws-terraform-ecs-cicd:*"
       ]
     }
   }
 }
+   
 
 resource "aws_iam_role" "github_actions" {
   name                 = "${var.project_name}-github-actions-role"

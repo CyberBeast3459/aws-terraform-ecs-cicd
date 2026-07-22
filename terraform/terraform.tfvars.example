@@ -1,0 +1,4 @@
+aws_region         = "us-east-1"
+project_name       = "cloud-status-dashboard"
+image_tag          = "latest"
+deploy_application = false

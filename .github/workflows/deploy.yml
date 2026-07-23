@@ -35,10 +35,14 @@ jobs:
       - name: Install test dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Run automated tests
+            - name: Run automated tests
         run: python -m pytest
 
-      - name: Configure AWS credentials through OIDC
+      - name: Show GitHub OIDC claims
+        if: github.event_name == 'push'
+        uses: github/actions-oidc-debugger@main
+        with:
+          audience: sts.amazonaws.com
         if: github.event_name == 'push'
         uses: aws-actions/configure-aws-credentials@v4
         with:

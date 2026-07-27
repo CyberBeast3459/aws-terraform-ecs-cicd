@@ -39,9 +39,9 @@ docker run --rm -p 8080:8080 cloud-status-dashboard
 - [x] Amazon ECR repository configuration
 - [x] Amazon ECS Fargate service configuration
 - [x] CloudWatch logs and load-balancer health-check configuration
-- [ ] Successful AWS deployment
-- [ ] GitHub Actions CI/CD with AWS OIDC authentication
-- [ ] Architecture diagram, screenshots, and deployment documentation
+- [x] Successful AWS deployment
+- [x] GitHub Actions CI/CD with AWS OIDC authentication
+- [x] Architecture diagram, screenshots, and deployment documentation
 
 ## Cost note
 

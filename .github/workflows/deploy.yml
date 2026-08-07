@@ -17,6 +17,7 @@ env:
   ECR_REPOSITORY: cloud-status-dashboard
   ECS_CLUSTER: cloud-status-dashboard-cluster
   ECS_SERVICE: cloud-status-dashboard-service
+  LOCAL_IMAGE: cloud-status-dashboard:${{ github.sha }}
 
 jobs:
   test-and-deploy:
@@ -38,8 +39,76 @@ jobs:
       - name: Run automated tests
         run: python -m pytest
 
+      - name: Install Docker Security Auditor
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "git+https://github.com/CyberBeast3459/docker-security-auditor.git@dcd1e8d60d6da195f27e9cd0b257febbd0d2404a"
+
+      - name: Set up Trivy
+        uses: aquasecurity/setup-trivy@e07451d2e059ed86c2870430ea286b3a9e0bf241
+        with:
+          version: v0.72.0
+          cache: true
+
+      - name: Build Docker image for security scan
+        run: docker build --pull -t "$LOCAL_IMAGE" .
+
+      - name: Run Docker Security Auditor
+        id: docker-security-audit
+        shell: bash
+        run: |
+          mkdir -p reports
+          set +e
+          docker-security-auditor audit "$LOCAL_IMAGE" --json-report reports/docker-security-audit.json
+          audit_exit_code=$?
+          set -e
+          echo "docker_security_audit_exit_code=$audit_exit_code" >> "$GITHUB_OUTPUT"
+          echo "Docker Security Auditor exit code: $audit_exit_code"
+          exit 0
+
+      - name: Upload Docker Security Audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-security-audit-${{ github.sha }}
+          path: reports/docker-security-audit.json
+          if-no-files-found: warn
+
+      - name: Enforce Docker security policy
+        id: security-policy
+        if: always()
+        shell: bash
+        env:
+          AUDIT_EXIT_CODE: ${{ steps.docker-security-audit.outputs.docker_security_audit_exit_code }}
+        run: |
+          case "$AUDIT_EXIT_CODE" in
+            0)
+              echo "Docker Security Auditor passed."
+              echo "security_gate_passed=true" >> "$GITHUB_OUTPUT"
+              ;;
+            1)
+              echo "::warning::Docker Security Auditor reported MEDIUM findings; deployment continues with a warning."
+              echo "security_gate_passed=true" >> "$GITHUB_OUTPUT"
+              ;;
+            2|3)
+              echo "::error::Docker Security Auditor reported HIGH or CRITICAL findings; failing the workflow."
+              echo "security_gate_passed=false" >> "$GITHUB_OUTPUT"
+              exit 1
+              ;;
+            4)
+              echo "::error::Docker Security Auditor returned operational error code 4."
+              echo "security_gate_passed=false" >> "$GITHUB_OUTPUT"
+              exit 1
+              ;;
+            *)
+              echo "::error::Unexpected Docker Security Auditor exit code $AUDIT_EXIT_CODE."
+              echo "security_gate_passed=false" >> "$GITHUB_OUTPUT"
+              exit 1
+              ;;
+          esac
+
       - name: Show GitHub OIDC claims
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.security-policy.outputs.security_gate_passed == 'true'
         shell: bash
         run: |
           python - <<'PY'
@@ -63,27 +132,29 @@ jobs:
           PY
 
       - name: Configure AWS credentials through OIDC
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.security-policy.outputs.security_gate_passed == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Sign in to Amazon ECR
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.security-policy.outputs.security_gate_passed == 'true'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push Docker image
-        if: github.event_name == 'push'
+      - name: Retag and push Docker image to ECR
+        if: github.event_name == 'push' && steps.security-policy.outputs.security_gate_passed == 'true'
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -t "$ECR_REGISTRY/$ECR_REPOSITORY:latest" .
+          docker tag "$LOCAL_IMAGE" "$ECR_REGISTRY/$ECR_REPOSITORY:${GITHUB_SHA}"
+          docker tag "$LOCAL_IMAGE" "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:${GITHUB_SHA}"
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
 
       - name: Redeploy ECS service
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.security-policy.outputs.security_gate_passed == 'true'
         run: |
           aws ecs update-service \
             --cluster "$ECS_CLUSTER" \

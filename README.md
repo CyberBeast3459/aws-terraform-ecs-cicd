@@ -1,6 +1,6 @@
 # AWS Terraform ECS CI/CD
 
-A portfolio project that deploys a containerized Flask status dashboard to Amazon ECS Fargate. Infrastructure is provisioned with Terraform, and GitHub Actions will test, build, and publish the application to Amazon ECR before deploying it to ECS.
+A portfolio project that deploys a containerized Flask status dashboard to Amazon ECS Fargate. Infrastructure is provisioned with Terraform, and GitHub Actions will test, build, scan, and publish the application to Amazon ECR before deploying it to ECS.
 
 ## Planned architecture
 
@@ -30,6 +30,19 @@ Open `http://localhost:8080` and verify `http://localhost:8080/health`.
 docker build -t cloud-status-dashboard .
 docker run --rm -p 8080:8080 cloud-status-dashboard
 ```
+
+## CI/CD security gate
+
+The GitHub Actions pipeline now runs in this order:
+
+1. Install dependencies and run the automated test suite.
+2. Build the Docker image once with `docker build --pull` and tag it immutably as `cloud-status-dashboard:${{ github.sha }}`.
+3. Run the Docker Security Auditor and write the report to `reports/docker-security-audit.json`.
+4. Upload the JSON report as an artifact named `docker-security-audit-${{ github.sha }}` so it can be downloaded from the Actions run.
+5. Enforce the security gate: exit code `0` passes, exit code `1` (MEDIUM) logs a warning and continues, and exit codes `2` or `3` (HIGH or CRITICAL) fail the workflow and block the image from being pushed. Exit code `4` or any unexpected code is treated as an operational error.
+6. On pushes to `main`, only after the gate passes, authenticate with AWS OIDC, log in to ECR, and push the already-scanned image under both the commit tag and `latest`.
+
+MEDIUM findings generate a warning but do not block deployment. HIGH and CRITICAL findings block deployment until the image is remediated.
 
 ## Project stages
 

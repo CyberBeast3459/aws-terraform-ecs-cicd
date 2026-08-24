@@ -44,6 +44,26 @@ The GitHub Actions pipeline now runs in this order:
 
 MEDIUM findings generate a warning but do not block deployment. HIGH and CRITICAL findings block deployment until the image is remediated.
 
+## CI/CD Pipeline Evidence
+
+### Workflow history
+
+The GitHub Actions history demonstrates the pipeline’s iterative development through pull requests, including the completed container security gate and a successful deployment from the `main` branch.
+
+![GitHub Actions pipeline history](docs/images/cicd-pipeline-overview.png)
+
+### Successful pipeline run
+
+The completed workflow ran the full test, security, build, and deployment process successfully. The run also produced a downloadable Docker Security Audit report as a workflow artifact.
+
+![Successful CI/CD pipeline run](docs/images/cicd-success-summary.png)
+
+### Security gate and AWS deployment
+
+Before deployment, the pipeline runs automated tests, builds the Docker image, performs Trivy-backed auditing, uploads the security report, and enforces the container security policy. After approval, GitHub Actions authenticates to AWS through OIDC, pushes the image to Amazon ECR, and redeploys the Amazon ECS service.
+
+![Security gate and AWS ECS deployment steps](docs/images/cicd-security-gate-and-deployment.png)
+
 ## Project stages
 
 - [x] Flask application and automated tests

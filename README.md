@@ -8,9 +8,9 @@ A portfolio project that deploys a containerized Flask status dashboard to Amazo
 
 Container logs are sent to Amazon CloudWatch Logs.
 
-## Current stage
+## Project status
 
-Stage 1 is complete: the Flask application passes its automated tests and runs locally as a non-root Docker container. Stage 2 Terraform infrastructure is scaffolded and awaiting deployment to AWS.
+The project is complete. The Flask application is tested and containerized with a non-root runtime user; Terraform provisions the AWS infrastructure; and GitHub Actions runs the automated tests, enforces the container security gate, authenticates through AWS OIDC, publishes the approved image to Amazon ECR, and redeploys the Amazon ECS Fargate service.
 
 ## Run locally
 
